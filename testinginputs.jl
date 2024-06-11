@@ -20,7 +20,6 @@ set_ee!(nuc, 6.5)
 set_lattice!(nuc, [60,60,60], [0.2,0.2,0.2])
 set_periodic!(nuc)
 set_metric!(nuc,1)
-set_physical!(nuc,false)
 
 
 overview(nuc)
@@ -35,7 +34,11 @@ make_rational_map!(nuc, p4, q4, f4)
 Baryon(nuc)
 Energy(nuc)
 
-# Without a profile function, the make_rational_map! function will find an OK approximate
+overview(nuc)
+
+# Without a profile function
 
 make_rational_map!(nuc, p4, q4; baryon=4)
 Energy(nuc)
+
+overview(nuc)
