@@ -19,9 +19,9 @@ set_Fpi!(nuc, 100)
 set_ee!(nuc, 6.5)
 set_lattice!(nuc, [60,60,60], [0.2,0.2,0.2])
 set_periodic!(nuc)
+set_metric!(nuc,1)
 
 overview(nuc)
-
 
 
 p4(z) = z^4 + 2.0*sqrt(3.0)*im*z^2 + 1.0;

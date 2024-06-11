@@ -72,6 +72,38 @@ function get_energy_density!(density, sk ;moment=0)
 
 end
 
+function left_t(sk,dp,i,j,k)
+
+    p0 = sk.pion_field[i,j,k,4]
+    p1 = sk.pion_field[i,j,k,1]
+    p2 = sk.pion_field[i,j,k,2]
+    p3 = sk.pion_field[i,j,k,3]
+
+    phi = [p1,p2,p3]
+
+    c = zeros(3,3)
+    dp_s = dp[:,1:3]
+    dp_t = dp[:,4]
+
+    for a in 1:3
+        for b in 1:3
+            c[b,a] = (p0*dp_s[b,a] - (dp_t[b]*phi[a]))
+        c[:,a] += LinearAlgebra.cross(phi,dp_s[a,:])
+        end
+    end
+    
+    return c
+end
+
+function b_metric_su2(sk,u,v)
+    lambda = sk.metric
+
+    met_su2 = u[1]*v[1]+u[2]*v[2]+lambda*(u[3]*v[3])
+
+    return met_su2
+end
+
+
 
 function b_metric(sk,v,w,i,j,k)
     lambda = sk.metric
@@ -79,11 +111,11 @@ function b_metric(sk,v,w,i,j,k)
     p0 = sk.pion_field[i,j,k,4]
     p1 = sk.pion_field[i,j,k,1]
     p2 = sk.pion_field[i,j,k,2]
-    p3 = sk.pion_field[i,j,k,3]
+    p3 = sk.pion_field[i,j,k,3] 
 
-    norm = (p0*v[1] - v[4]*p1 + p2*v[3] - p3*v[2]) * (p0*w[1] - w[4]*p1 + p2*w[3] - p3*w[2]) + (p0*v[2] - v[4]*p2 + p3*v[1] - p1*v[3]) * (p0*w[2] - w[4]*p2 + p3*w[1] - p1*w[3]) + lambda * (p0*v[3] - v[4]*p3 + p1*v[2] - p2*v[1]) * (p0*w[3] - w[4]*p3 + p1*w[2] - p2*w[1])
+    met = (p0*v[1] - v[4]*p1 + p2*v[3] - p3*v[2]) * (p0*w[1] - w[4]*p1 + p2*w[3] - p3*w[2]) + (p0*v[2] - v[4]*p2 + p3*v[1] - p1*v[3]) * (p0*w[2] - w[4]*p2 + p3*w[1] - p1*w[3]) + lambda * (p0*v[3] - v[4]*p3 + p1*v[2] - p2*v[1]) * (p0*w[3] - w[4]*p3 + p1*w[2] - p2*w[1])
 
-    return norm
+    return met
 
 end
 
@@ -101,6 +133,7 @@ function new_e2(dp, sk, i, j, k, mpi)
     end 
     return e_0 + e_2
 end
+
 
 
 function engpt(dp,p4,mpi)
