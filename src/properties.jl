@@ -64,7 +64,7 @@ function get_energy_density!(density, sk ;moment=0)
             dp = getDP(sk ,i, j, k )
             rm = sqrt( sk.x[1][i]^2 + sk.x[2][j]^2 + sk.x[3][k]^2 )^moment
 
-            density[i,j,k] = new_e2(dp,sk,i,j,k,sk.mpi) * rm
+            density[i,j,k] = newer_e2(sk,dp,i,j,k,sk.mpi) * rm
 
         
         end
@@ -73,27 +73,27 @@ function get_energy_density!(density, sk ;moment=0)
 end
 
 function left_t(sk,dp,i,j,k)
-
+    
     p0 = sk.pion_field[i,j,k,4]
     p1 = sk.pion_field[i,j,k,1]
     p2 = sk.pion_field[i,j,k,2]
     p3 = sk.pion_field[i,j,k,3]
 
-    phi = [p1,p2,p3]
+    phi = [p1, p2, p3]
 
     c = zeros(3,3)
-    dp_s = dp[:,1:3]
-    dp_t = dp[:,4]
+    dp_s = dp[:, 1:3]  
+    dp_t = dp[:, 4]    
 
     for a in 1:3
-        for b in 1:3
-            c[b,a] = (p0*dp_s[b,a] - (dp_t[b]*phi[a]))
-        c[:,a] += LinearAlgebra.cross(phi,dp_s[a,:])
-        end
+        v = dp_s[a,:]
+        v0 = dp_t[a]
+        c[a,:] = (p0 * v) - (v0 * phi) + LinearAlgebra.cross(phi, v)
     end
-    
+
     return c
 end
+
 
 function b_metric_su2(sk,u,v)
     lambda = sk.metric
@@ -101,6 +101,21 @@ function b_metric_su2(sk,u,v)
     met_su2 = u[1]*v[1]+u[2]*v[2]+lambda*(u[3]*v[3])
 
     return met_su2
+end
+
+function newer_e2(sk,dp,i,j,k,mpi)
+    tp = left_t(sk,dp,i,j,k)
+
+    p0 = sk.pion_field[i,j,k,4]
+    ne0 = 2 * mpi^2 * (1 - p0)
+    ne2 = 0.0
+    
+    for r in 1:3
+        v = tp[:,r]
+        ne2 += b_metric_su2(sk,v,v)
+    end
+    
+    return ne0 + ne2
 end
 
 
