@@ -109,44 +109,13 @@ function newer_e2(sk,dp,i,j,k,mpi)
     p0 = sk.pion_field[i,j,k,4]
     ne0 = 2 * mpi^2 * (1 - p0)
     ne2 = 0.0
-    
+
     for r in 1:3
         v = tp[:,r]
         ne2 += b_metric_su2(sk,v,v)
     end
     
     return ne0 + ne2
-end
-
-
-
-function b_metric(sk,v,w,i,j,k)
-    lambda = sk.metric
-
-    p0 = sk.pion_field[i,j,k,4]
-    p1 = sk.pion_field[i,j,k,1]
-    p2 = sk.pion_field[i,j,k,2]
-    p3 = sk.pion_field[i,j,k,3] 
-
-    met = (p0*v[1] - v[4]*p1 + p2*v[3] - p3*v[2]) * (p0*w[1] - w[4]*p1 + p2*w[3] - p3*w[2]) + (p0*v[2] - v[4]*p2 + p3*v[1] - p1*v[3]) * (p0*w[2] - w[4]*p2 + p3*w[1] - p1*w[3]) + lambda * (p0*v[3] - v[4]*p3 + p1*v[2] - p2*v[1]) * (p0*w[3] - w[4]*p3 + p1*w[2] - p2*w[1])
-
-    return met
-
-end
-
-function new_e2(dp, sk, i, j, k, mpi)
-    p0 = sk.pion_field[i,j,k,4]
-    e_0 = 2 * mpi^2 * (1 - p0)
-    e_2 = 0.0
-    for n in 1:3 
-        v = [0.0, 0.0, 0.0, 0.0]
-        v[1] = dp[n,1]
-        v[2] = dp[n,2]
-        v[3] = dp[n,3]
-        v[4] = dp[n,4]
-        e_2 += b_metric(sk, v, v, i, j, k)
-    end 
-    return e_0 + e_2
 end
 
 
