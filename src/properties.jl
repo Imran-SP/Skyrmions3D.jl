@@ -88,9 +88,8 @@ function left_t(sk,dp,i,j,k)
     for a in 1:3
         v = dp_s[a,:]
         v0 = dp_t[a]
-        c[a,:] = (p0 * v) - (v0 * phi) + [(phi[2] * v[3] - phi[3] * v[2]),
-                                            (phi[3] * v[1] - phi[1] * v[3]),
-                                            (phi[1] * v[2] - phi[2] * v[1])]
+        c[a,:] = (p0 * v) - (v0 * phi) + [(phi[2] * v[3] - phi[3] * v[2]),(phi[3] * v[1] - phi[1] * v[3]),(phi[1] * v[2] - phi[2] * v[1])]
+
     end
 
     return c
