@@ -88,7 +88,9 @@ function left_t(sk,dp,i,j,k)
     for a in 1:3
         v = dp_s[a,:]
         v0 = dp_t[a]
-        c[a,:] = (p0 * v) - (v0 * phi) + LinearAlgebra.cross(phi, v)
+        c[a,:] = (p0 * v) - (v0 * phi) + [(phi[2] * v[3] - phi[3] * v[2]),
+                                            (phi[3] * v[1] - phi[1] * v[3]),
+                                            (phi[1] * v[2] - phi[2] * v[1])]
     end
 
     return c
@@ -121,7 +123,9 @@ end
 
 function lie_bracket(x,y)
     
-    return -2*LinearAlgebra.cross(x,y)
+    return -2*[(x[2] * y[3] - x[3] * y[2]),
+            (x[3] * y[1] - x[1] * y[3]),
+            (x[1] * y[2] - x[2] * y[1])]
 end
 
 function newer_e4(sk,dp,i,j,k)
