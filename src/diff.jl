@@ -142,11 +142,11 @@ function get_berger_grad_e2_star(p::SVector{4,Float64}, dp::SMatrix{3,4,Float64}
 
     sqd_term = (p4*(ddp1[1,3] + ddp1[2,3] + ddp1[3,3])) - (p3*(ddp1[1,4] + ddp1[2,4] + ddp1[3,4])) + (p1*(ddp1[1,2] + ddp1[2,2] + ddp1[3,2])) - (p2*(ddp1[1,1] + ddp1[2,1] + ddp1[3,1]))
 
-    ωd1_L3 = @SVector [dp13, dp12, -dp11, -dp14]
-    ωd2_L3 = @SVector [dp23, dp22, -dp21, -dp24]
-    ωd3_L3 = @SVector [dp33, dp32, -dp31, -dp34]
+    ωd1_L3 = @SVector [dp12, -dp11, -dp14, dp13]
+    ωd2_L3 = @SVector [dp22, -dp21, -dp24, dp23]
+    ωd3_L3 = @SVector [dp32, -dp31, -dp34, dp33]
 
-    ωp = @SVector [p3, p2, -p1, -p4]
+    ωp = @SVector [p2, -p1, -p4, p3]
 
     result = (4*(L3_1*ωd1_L3 + L3_2*ωd2_L3 + L3_3*ωd3_L3) + 2*sqd_term*ωp)
     
@@ -686,7 +686,40 @@ end
 function e2s_gradient_flow_1_step!(phi,dEdp,dt)
 
     getdE2sdp!(phi,dEdp)
-    phi.pion_field .-= dt.*dEdp
+    phi.pion_field .= dt.*dEdp
     normer!(phi)
 
 end
+
+function print_berger_grad_e2_star_at_31(sk)
+    i, j, k = 31, 31, 31
+    p, dp, ddp1, _ = getders_local_np(sk, i, j, k)
+    grad_e2s = get_berger_grad_e2_star(p, dp, ddp1)
+    println("get_berger_grad_e2_star result at (i, j, k) = (31, 31, 31): ", grad_e2s)
+end
+
+"""
+function get_berger_grad_e2_star(p::SVector{4,Float64}, dp::SMatrix{3,4,Float64}, ddp1::SMatrix{3,4,Float64})
+
+    p1, p2, p3, p4 = p
+    dp11, dp12, dp13, dp14 = dp[1,1], dp[1,2], dp[1,3], dp[1,4]
+    dp21, dp22, dp23, dp24 = dp[2,1], dp[2,2], dp[2,3], dp[2,4]
+    dp31, dp32, dp33, dp34 = dp[3,1], dp[3,2], dp[3,3], dp[3,4]
+
+    L3_1 = (p4*dp13 - p3*dp14 + p1*dp12 - p2*dp11)
+    L3_2 = (p4*dp23 - p3*dp24 + p1*dp22 - p2*dp21)
+    L3_3 = (p4*dp33 - p3*dp34 + p1*dp32 - p2*dp31)
+
+    sqd_term = (p4*(ddp1[1,3] + ddp1[2,3] + ddp1[3,3])) - (p3*(ddp1[1,4] + ddp1[2,4] + ddp1[3,4])) + (p1*(ddp1[1,2] + ddp1[2,2] + ddp1[3,2])) - (p2*(ddp1[1,1] + ddp1[2,1] + ddp1[3,1]))
+
+    ωd1_L3 = @SVector [dp13, dp12, -dp11, -dp14]
+    ωd2_L3 = @SVector [dp23, dp22, -dp21, -dp24]
+    ωd3_L3 = @SVector [dp33, dp32, -dp31, -dp34]
+
+    ωp = @SVector [p2, -p1, -p4, p3]
+
+    result = (4*(L3_1*ωd1_L3 + L3_2*ωd2_L3 + L3_3*ωd3_L3) + 2*sqd_term*ωp)
+    
+    return result
+end
+"""
