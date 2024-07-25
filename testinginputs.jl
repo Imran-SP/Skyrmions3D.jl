@@ -33,6 +33,11 @@ make_rational_map!(nuc, p4, q4, f4)
 Baryon(nuc)
 Energy(nuc)
 
+set_metric!(nuc,0.9)
+
+gradient_flow!(nuc,tolerance=0.1,checks=100, dt = 0.0003)
+
+
 # Without a profile function, the make_rational_map! function will find an OK approximate
 
 make_rational_map!(nuc, p4, q4; baryon=4)
