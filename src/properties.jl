@@ -72,74 +72,75 @@ function get_energy_density!(density, sk ;moment=0)
 
 end
 
-function left_t(sk,dp,i,j,k)
-    
-    p0 = sk.pion_field[i,j,k,4]
-    p1 = sk.pion_field[i,j,k,1]
-    p2 = sk.pion_field[i,j,k,2]
-    p3 = sk.pion_field[i,j,k,3]
+function left_t(sk, dp, i, j, k)
 
-    phi = [p1, p2, p3]
+    p0 = sk.pion_field[i, j, k, 4]
+    phi = sk.pion_field[i, j, k, 1:3]
 
-    c = zeros(3,3)
-    dp_s = dp[:, 1:3]  
-    dp_t = dp[:, 4]    
+    dp_s = dp[:, 1:3]
+    dp_t = dp[:, 4]
+
+    c = zeros(3, 3)
 
     for a in 1:3
-        v = dp_s[a,:]
+        v = dp_s[a, :]
         v0 = dp_t[a]
-        c[a,:] = (p0 * v) - (v0 * phi) + [(phi[2] * v[3] - phi[3] * v[2]),
-        (phi[3] * v[1] - phi[1] * v[3]),
-        (phi[1] * v[2] - phi[2] * v[1])]
+        
+        cross_prod = [
+            phi[2] * v[3] - phi[3] * v[2],
+            phi[3] * v[1] - phi[1] * v[3],
+            phi[1] * v[2] - phi[2] * v[1]
+        ]
+
+
+        c[a, :] = (p0 * v) - (v0 * phi) + cross_prod
     end
 
     return c
 end
 
 
-function b_metric_su2(sk,u,v)
-    lambda = sk.metric
 
-    met_su2 = u[1]*v[1]+u[2]*v[2]+lambda*(u[3]*v[3])
-
-    return met_su2
+function lie_bracket(x, y)
+    return [-2 * (x[2] * y[3] - x[3] * y[2]),
+            -2 * (x[3] * y[1] - x[1] * y[3]),
+            -2 * (x[1] * y[2] - x[2] * y[1])]
 end
 
 
-function newer_e2(sk,dp,i,j,k,mpi)
-    lc = left_t(sk,dp,i,j,k)
+function b_metric_su2(lambda, u, v)
+    return u[1] * v[1] + u[2] * v[2] + lambda^2 * (u[3] * v[3])
+end
 
-    p0 = sk.pion_field[i,j,k,4]
+
+function newer_e2(sk, dp, i, j, k, mpi)
+    lc = left_t(sk, dp, i, j, k)
+    lambda = sk.metric
+
+    p0 = sk.pion_field[i, j, k, 4]
     ne0 = 2 * mpi^2 * (1 - p0)
     ne2 = 0.0
 
     for r in 1:3
-        v = lc[r,:]
-        ne2 += b_metric_su2(sk,v,v)
+        v = lc[r, :]
+        ne2 += b_metric_su2(lambda, v, v)
     end
-    
+
     return ne0 + ne2
 end
 
-function lie_bracket(x,y)
-    
-    return [-2 * (x[2] * y[3] - x[3] * y[2]),
-    -2 * (x[3] * y[1] - x[1] * y[3]),
-    -2 * (x[1] * y[2] - x[2] * y[1])]
-end
 
-function newer_e4(sk,dp,i,j,k)
-    lc = left_t(sk,dp,i,j,k)
+function newer_e4(sk, dp, i, j, k)
+    lc = left_t(sk, dp, i, j, k)
+    lambda = sk.metric
 
-    L_1 = lc[1,:]
-    L_2 = lc[2,:]
-    L_3 = lc[3,:]
+    L_1, L_2, L_3 = lc[1, :], lc[2, :], lc[3, :]
 
-    LB_z = lie_bracket(L_1,L_2)
-    LB_y = lie_bracket(L_1,L_3)
-    LB_x = lie_bracket(L_2,L_3)
+    LB_x = lie_bracket(L_2, L_3)
+    LB_y = lie_bracket(L_1, L_3)
+    LB_z = lie_bracket(L_1, L_2)
 
-    ne4 = 1/4 * ( b_metric_su2(sk,LB_x,LB_x) + b_metric_su2(sk,LB_y,LB_y) + b_metric_su2(sk,LB_z,LB_z))
+    ne4 = 1/4 * (b_metric_su2(lambda, LB_x, LB_x) + b_metric_su2(lambda, LB_y, LB_y) + b_metric_su2(lambda, LB_z, LB_z))
 
     return ne4
 end
@@ -158,7 +159,7 @@ function engpt(dp,p4,mpi)
     e_2 = (dp[1,1]^2 + dp[1,2]^2 + dp[1,3]^2 + dp[1,4]^2 + dp[2,1]^2 + dp[2,2]^2 + dp[2,3]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,2]^2 + dp[3,3]^2 + dp[3,4]^2)
     e_4 = (dp[1,4]^2*dp[2,1]^2 + dp[1,4]^2*dp[2,2]^2 + dp[1,4]^2*dp[2,3]^2 + dp[1,1]^2*(dp[2,2]^2 + dp[2,3]^2) - 2*dp[1,1]*dp[1,4]*dp[2,1]*dp[2,4] + dp[1,1]^2*dp[2,4]^2 + dp[1,4]^2*dp[3,1]^2 + dp[2,2]^2*dp[3,1]^2 + dp[2,3]^2*dp[3,1]^2 + dp[2,4]^2*dp[3,1]^2 - 2*dp[2,1]*dp[2,2]*dp[3,1]*dp[3,2] + dp[1,1]^2*dp[3,2]^2 + dp[1,4]^2*dp[3,2]^2 + dp[2,1]^2*dp[3,2]^2 + dp[2,3]^2*dp[3,2]^2 + dp[2,4]^2*dp[3,2]^2 - 2*dp[2,1]*dp[2,3]*dp[3,1]*dp[3,3] - 2*dp[2,2]*dp[2,3]*dp[3,2]*dp[3,3] + dp[1,1]^2*dp[3,3]^2 + dp[1,4]^2*dp[3,3]^2 + dp[2,1]^2*dp[3,3]^2 + dp[2,2]^2*dp[3,3]^2 + dp[2,4]^2*dp[3,3]^2 - 2*(dp[1,1]*dp[1,4]*dp[3,1] + dp[2,4]*(dp[2,1]*dp[3,1] + dp[2,2]*dp[3,2] + dp[2,3]*dp[3,3]))*dp[3,4] + (dp[1,1]^2 + dp[2,1]^2 + dp[2,2]^2 + dp[2,3]^2)*dp[3,4]^2 + dp[1,3]^2*(dp[2,1]^2 + dp[2,2]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,2]^2 + dp[3,4]^2) + dp[1,2]^2*(dp[2,1]^2 + dp[2,3]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,3]^2 + dp[3,4]^2) - 2*dp[1,2]*(dp[1,1]*(dp[2,1]*dp[2,2] + dp[3,1]*dp[3,2]) + dp[1,3]*(dp[2,2]*dp[2,3] + dp[3,2]*dp[3,3]) + dp[1,4]*(dp[2,2]*dp[2,4] + dp[3,2]*dp[3,4])) - 2*dp[1,3]*(dp[1,1]*(dp[2,1]*dp[2,3] + dp[3,1]*dp[3,3]) + dp[1,4]*(dp[2,3]*dp[2,4] + dp[3,3]*dp[3,4])))
 
-    return e_0 + e_2 +e_4
+    return e_0 + e_2 + e_4
 
 end
 

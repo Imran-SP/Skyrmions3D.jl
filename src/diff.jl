@@ -87,7 +87,7 @@ function getdEdp_np!(sk, dEdp)
         @inbounds for j in sk.sum_grid[2], i in sk.sum_grid[1]
                     
             p, dp, ddp1, ddp2 = getders_local_np(sk,i,j,k)
-            getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, sk.mpi, i, j, k)
+            getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, sk.mpi, i, j, k, sk.metric)
 
         end
     end
@@ -100,22 +100,23 @@ function getdEdp_p!(sk, dEdp)
         @inbounds for j in sk.sum_grid[2], i in sk.sum_grid[1]
                     
             p, dp, ddp1, ddp2 = getders_local_p(sk,i,j,k)
-            getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, sk.mpi, i, j, k)
+            getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, sk.mpi, i, j, k, sk.metric)
 
         end
     end
 
 end
 
-function getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, mpi, i, j, k)
+function getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, mpi, i, j, k, alpha)
 
     Aj = getAj(dp,ddp1,ddp2)
     Bj = getBj(dp)
+    Cj = adjsLi_Li(p,dp,alpha)
 
     @inbounds for a in 1:4
-        dEdp[i,j,k,a] = Aj[1]*dp[1,a] + Aj[2]*dp[2,a] + Aj[3]*dp[3,a] + Bj[1]*ddp1[1,a] + Bj[2]*ddp1[2,a] + Bj[3]*ddp1[3,a] + Bj[4]*ddp2[1,a] + Bj[5]*ddp2[2,a] + Bj[6]*ddp2[3,a]
+        dEdp[i,j,k,a] = Aj[1]*dp[1,a] + Aj[2]*dp[2,a] + Aj[3]*dp[3,a] + Bj[1]*ddp1[1,a] + Bj[2]*ddp1[2,a] + Bj[3]*ddp1[3,a] + Bj[4]*ddp2[1,a] + Bj[5]*ddp2[2,a] + Bj[6]*ddp2[3,a] +0.5*Cj[a]
     end
-    dEdp[i,j,k,4] += mpi^2
+    #dEdp[i,j,k,4] += mpi^2
 
     @inbounds DEdotpion_field = dEdp[i,j,k,1]*p[1] + dEdp[i,j,k,2]*p[2] + dEdp[i,j,k,3]*p[3] + dEdp[i,j,k,4]*p[4]
 
@@ -147,6 +148,57 @@ function getBj(dp)
     )
 
 end
+
+function adjsLi_Li(p, dp, alpha)
+
+   
+    p1, p2, p3, p4 = p
+
+    dp11, dp12, dp13, dp14 = dp[1, 1], dp[1, 2], dp[1, 3], dp[1, 4]
+    dp21, dp22, dp23, dp24 = dp[2, 1], dp[2, 2], dp[2, 3], dp[2, 4]
+    dp31, dp32, dp33, dp34 = dp[3, 1], dp[3, 2], dp[3, 3], dp[3, 4]
+
+
+    v_1 = @SVector [
+        p4 * dp11 - p1 * dp14 + p2 * dp13 - p3 * dp12,
+        p4 * dp12 - p2 * dp14 + p3 * dp11 - p1 * dp13,
+        p4 * dp13 - p3 * dp14 + p1 * dp12 - p2 * dp11
+    ]
+    v_2 = @SVector [
+        p4 * dp21 - p1 * dp24 + p2 * dp23 - p3 * dp22,
+        p4 * dp22 - p2 * dp24 + p3 * dp21 - p1 * dp23,
+        p4 * dp23 - p3 * dp24 + p1 * dp22 - p2 * dp21
+    ]
+    v_3 = @SVector [
+        p4 * dp31 - p1 * dp34 + p2 * dp33 - p3 * dp32,
+        p4 * dp32 - p2 * dp34 + p3 * dp31 - p1 * dp33,
+        p4 * dp33 - p3 * dp34 + p1 * dp32 - p2 * dp31
+    ]
+    
+    t1 = v_1[3] * @SVector [
+        -p4 * v_1[2] - p3 * v_1[1],
+        p4 * v_1[1] + p3 * v_1[2],
+        p1 * v_1[1] + p2 * v_1[2],
+        p1 * v_1[2] - p2 * v_1[1]
+    ]
+    t2 = v_2[3] * @SVector [
+        -p4 * v_2[2] - p3 * v_2[1],
+        p4 * v_2[1] + p3 * v_2[2],
+        p1 * v_2[1] + p2 * v_2[2],
+        p1 * v_2[2] - p2 * v_2[1]
+    ]
+    t3 = v_3[3] * @SVector [
+        -p4 * v_3[2] - p3 * v_3[1],
+        p4 * v_3[1] + p3 * v_3[2],
+        p1 * v_3[1] + p2 * v_3[2],
+        p1 * v_3[2] - p2 * v_3[1]
+    ]
+
+    result = 2 * (1 - alpha^2) * (t1 + t2 + t3)
+
+    return result
+end
+
 
 function EnergyANF(sk, ED)
 
