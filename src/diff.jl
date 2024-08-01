@@ -112,9 +112,12 @@ function getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, mpi, i, j, k, alpha)
     Aj = getAj(dp,ddp1,ddp2)
     Bj = getBj(dp)
     Cj = adjsLi_Li(p,dp,alpha)
+    Dj = adsLi_dLB(p, dp, ddp1, ddp2, alpha)
+    Ej = ads_dLi_Lb(p, dp, alpha)
+    Gj = lapterm(p,ddp1)
 
     @inbounds for a in 1:4
-        dEdp[i,j,k,a] = Aj[1]*dp[1,a] + Aj[2]*dp[2,a] + Aj[3]*dp[3,a] + Bj[1]*ddp1[1,a] + Bj[2]*ddp1[2,a] + Bj[3]*ddp1[3,a] + Bj[4]*ddp2[1,a] + Bj[5]*ddp2[2,a] + Bj[6]*ddp2[3,a] +0.5*Cj[a]
+        dEdp[i,j,k,a] = -Gj[a] - Cj[a] - Dj[a] - Ej[a] #+Aj[1]*dp[1,a] + Aj[2]*dp[2,a] + Aj[3]*dp[3,a] + Bj[1]*ddp1[1,a] + Bj[2]*ddp1[2,a] + Bj[3]*ddp1[3,a] + Bj[4]*ddp2[1,a] + Bj[5]*ddp2[2,a] + Bj[6]*ddp2[3,a]
     end
     #dEdp[i,j,k,4] += mpi^2
 
@@ -125,6 +128,26 @@ function getdEdp_pt!(dEdp, p, dp, ddp1, ddp2, mpi, i, j, k, alpha)
     end
 
 end
+
+function lapterm(p,ddp1)
+    p1, p2, p3, p4 = p
+
+    ddp11, ddp12, ddp13, ddp14 = ddp1[1,1], ddp1[1,2], ddp1[1,3], ddp1[1,4]
+    ddp21, ddp22, ddp23, ddp24 = ddp1[2,1], ddp1[2,2], ddp1[2,3], ddp1[2,4]
+    ddp31, ddp32, ddp33, ddp34 = ddp1[3,1], ddp1[3,2], ddp1[3,3], ddp1[3,4]
+
+    s1 = p4*(ddp11 + ddp21 + ddp31) - p1*(ddp14 + ddp24 + ddp34) + p2*(ddp13 + ddp23 + ddp33) - p3*(ddp12 + ddp22 + ddp32)
+    s2 = p4*(ddp12 + ddp22 + ddp32) - p2*(ddp14 + ddp24 + ddp34) + p3*(ddp11 + ddp21 + ddp31) - p1*(ddp13 + ddp23 + ddp33)
+    s3 = p4*(ddp13 + ddp23 + ddp33) - p3*(ddp14 + ddp24 + ddp34) + p1*(ddp12 + ddp22 + ddp32) - p2*(ddp11 + ddp21 + ddp31)
+
+    v = [-2*s1,-2*s2,-2*s3]
+
+    Lef = @SVector [p4*v[1] - p2*v[3] + p3*v[2], p4*v[2] - p3*v[1] + p1*v[3], p4*v[3] - p1*v[2] + p2*v[1], -p1*v[1] - p2*v[2] - p3*v[3]]
+
+    return Lef
+
+end
+
 
 function getAj(dp, ddp1, ddp2)
 
@@ -199,6 +222,139 @@ function adjsLi_Li(p, dp, alpha)
     return result
 end
 
+function adsLi_dLB(p, dp, ddp1, ddp2, alpha)
+
+    p1, p2, p3, p4 = p
+
+    dp11, dp12, dp13, dp14 = dp[1,1], dp[1,2], dp[1,3], dp[1,4]
+    dp21, dp22, dp23, dp24 = dp[2,1], dp[2,2], dp[2,3], dp[2,4]
+    dp31, dp32, dp33, dp34 = dp[3,1], dp[3,2], dp[3,3], dp[3,4]
+
+    ddp11, ddp12, ddp13, ddp14 = ddp1[1,1], ddp1[1,2], ddp1[1,3], ddp1[1,4]
+    ddp21, ddp22, ddp23, ddp24 = ddp1[2,1], ddp1[2,2], ddp1[2,3], ddp1[2,4]
+    ddp31, ddp32, ddp33, ddp34 = ddp1[3,1], ddp1[3,2], ddp1[3,3], ddp1[3,4]
+
+    dm11, dm12, dm13, dm14 = ddp2[1,1], ddp2[1,2], ddp2[1,3], ddp2[1,4]
+    dm21, dm22, dm23, dm24 = ddp2[2,1], ddp2[2,2], ddp2[2,3], ddp2[2,4]
+    dm31, dm32, dm33, dm34 = ddp2[3,1], ddp2[3,2], ddp2[3,3], ddp2[3,4]
+
+    v_1 = @SVector [
+        p4 * dp11 - p1 * dp14 + p2 * dp13 - p3 * dp12,
+        p4 * dp12 - p2 * dp14 + p3 * dp11 - p1 * dp13,
+        p4 * dp13 - p3 * dp14 + p1 * dp12 - p2 * dp11
+    ]
+    v_2 = @SVector [
+        p4 * dp21 - p1 * dp24 + p2 * dp23 - p3 * dp22,
+        p4 * dp22 - p2 * dp24 + p3 * dp21 - p1 * dp23,
+        p4 * dp23 - p3 * dp24 + p1 * dp22 - p2 * dp21
+    ]
+    v_3 = @SVector [
+        p4 * dp31 - p1 * dp34 + p2 * dp33 - p3 * dp32,
+        p4 * dp32 - p2 * dp34 + p3 * dp31 - p1 * dp33,
+        p4 * dp33 - p3 * dp34 + p1 * dp32 - p2 * dp31
+    ]
+
+
+    e_1_1 = @SVector [
+        0,
+        - alpha^2 * ( (ddp24*dp13 + dp24*dm33 - dp14*ddp23 - dm34*dp23 + ddp21*dp12 - ddp22*dp11 + dp21*dm32 - dp22*dm31) + (ddp34*dp13 + dp34*dm23 - dp14*ddp33 - dm24*dp33 + ddp31*dp12 - ddp32*dp11 + dp31*dm22 - dp32*dm21) ),
+        alpha^-2 * ( (ddp24*dp12 + dp24*dm32 - dp14*ddp22 - dm34*dp22 + ddp23*dp11 - ddp21*dp13 + dp23*dm31 - dp21*dm33) + (ddp34*dp12 + dp34*dm22 - dp14*ddp32 - dm24*dp32 + ddp33*dp11 - ddp31*dp13 + dp33*dm21 - dp31*dm23) )    
+    ]
+
+    e_1_2 = @SVector [
+        alpha^2 * ( (ddp24*dp13 + dp24*dm33 - dp14*ddp23 - dm34*dp23 + ddp21*dp12 - ddp22*dp11 + dp21*dm32 - dp22*dm31) + (ddp34*dp13 + dp34*dm23 - dp14*ddp33 - dm24*dp33 + ddp31*dp12 - ddp32*dp11 + dp31*dm22 - dp22*dm21) ),
+        0,
+        - alpha^-2 * ((ddp24*dp11 + dp24*dm31 - dp14*ddp21 - dm34*dp21 + ddp22*dp13 - ddp23*dp12 + dp22*dm33 - dp23*dm32) + (ddp34*dp11 + dp34*dm21 - dp14*ddp31 - dm24*dp31 + ddp32*dp13 - ddp33*dp12 + dp32*dm23 - dp33*dm22) )
+    ]
+
+    e_1_3 = @SVector [
+        -((ddp24*dp12 + dp24*dm32 - dp14*ddp22 - dm34*dp22 + ddp23*dp11 - ddp21*dp13 + dp23*dm31 - dp21*dm33) + (ddp34*dp12 + dp34*dm22 - dp14*ddp32 - dm24*dp32 + ddp33*dp11 - ddp31*dp13 + dp33*dm21 - dp31*dm23)),
+        ((ddp24*dp11 + dp24*dm31 - dp14*ddp21 - dm34*dp21 + ddp22*dp13 - ddp23*dp12 + dp22*dm33 - dp23*dm32) + (ddp34*dp11 + dp34*dm21 - dp14*ddp31 - dm24*dp31 + ddp32*dp13 - ddp33*dp12 + dp32*dm23 - dp33*dm22) ),
+        0
+    ]
+
+    e_2_1 = @SVector [
+        0,
+        - alpha^2 * ((ddp14*dp23 + dp14*dm33 - dp24*ddp13 - dm34*dp13 + ddp11*dp22 - ddp12*dp21 + dp11*dm32 - dp12*dm31) + (ddp34*dp23 + dp34*dm13 - dp24*ddp33 - dm14*dp33 + ddp31*dp22 - ddp32*dp21 + dp31*dm12 - dp32*dm11)),
+        alpha^-2 * ((ddp14*dp22 + dp14*dm32 - dp24*ddp12 - dm34*dp12 + ddp13*dp21 - ddp11*dp23 + dp13*dm31 - dp11*dm33) + (ddp34*dp22 + dp34*dm12 - dp24*ddp32 - dm14*dp32 + ddp33*dp21 - ddp31*dp23 + dp33*dm11 - dp31*dm13) )
+    ]
+
+    e_2_2 = @SVector [
+        alpha^2 * ((ddp14*dp23 + dp14*dm33 - dp24*ddp13 - dm34*dp13 + ddp11*dp22 - ddp12*dp21 + dp11*dm32 - dp12*dm31) + (ddp34*dp23 + dp34*dm13 - dp24*ddp33 - dm14*dp33 + ddp31*dp22 - ddp32*dp21 + dp31*dm12 - dp32*dm11)),
+        0,
+        - alpha^-2 * ((ddp14*dp21 + dp14*dm31 -dp24*ddp11 - dm34*dp11 + ddp12*dp23 - ddp13*dp22 + dp12*dm33 - dp13*dm32) + (ddp34*dp21 + dp34*dm11 -dp24*ddp31 - dm14*dp31 + ddp32*dp23 - ddp33*dp22 + dp32*dm13 - dp33*dm12))
+    ]
+
+    e_2_3 = @SVector [
+        -((ddp14*dp22 + dp14*dm32 - dp24*ddp12 - dm34*dp12 + ddp13*dp21 - ddp11*dp23 + dp13*dm31 - dp11*dm33) + (ddp34*dp22 + dp34*dm12 - dp24*ddp32 - dm14*dp32 + ddp33*dp21 - ddp31*dp23 + dp33*dm11 - dp31*dm13)),
+        ((ddp14*dp21 + dp14*dm31 - dp24*ddp11 - dm34*dp11 + ddp12*dp23 - ddp13*dp22 + dp12*dm33 - dp13*dm32) + (ddp34*dp21 + dp34*dm11 - dp24*ddp31 - dm14*dp31 + ddp32*dp23 - ddp33*dp22 + dp32*dm13 - dp33*dm12)),
+        0
+    ]
+
+    e_3_1 = @SVector [
+        0,
+        - alpha^2 * ((ddp14*dp33 + dp14*dm23 - dp34*ddp13 - dm24*dp13 + ddp11*dp32 - ddp12*dp31 + dp11*dm22 - dp12*dm21) + (ddp24*dp33 + dp24*dm13 - dp34*ddp23 - dm14*dp23 + ddp21*dp32 - ddp22*dp31 + dp21*dm12 - dp22*dm11)),
+        alpha^-2 * ((ddp14*dp32 + dp14*dm22 - dp34*ddp12 - dm24*dp12 + ddp13*dp31 - ddp11*dp33 + dp13*dm21 - dp11*dm23) + (ddp24*dp32 + dp24*dm12 - dp34*ddp22 - dm14*dp22 + ddp23*dp31 - ddp21*dp33 + dp23*dm11 - dp21*dm13) )
+    ]
+
+    e_3_2 = @SVector [
+        alpha^2 * ((ddp14*dp33 + dp14*dm23 - dp34*ddp13 - dm24*dp13 + ddp11*dp32 - ddp12*dp31 + dp11*dm22 - dp12*dm21) + (ddp24*dp33 + dp24*dm13 - dp34*ddp23 - dm14*dp23 + ddp21*dp32 - ddp22*dp31 + dp21*dm12 - dp22*dm11)),
+        0,
+        - alpha^-2 * ((ddp14*dp31 + dp14*dm21 - dp34*ddp11 - dm24*dp11 + ddp12*dp33 - ddp13*dp32 + dp12*dm23 - dp13*dm22) + (ddp14*dp31 + dp14*dm21 - dp34*ddp11 - dm24*dp11 + ddp12*dp33 - ddp13*dp32 + dp12*dm23 - dp13*dm22))
+    ]
+
+    e_3_3 = @SVector [
+        -((ddp14*dp32 + dp14*dm22 - dp34*ddp12 - dm24*dp12 + ddp13*dp31 - ddp11*dp33 + dp13*dm21 - dp11*dm23) + (ddp24*dp32 + dp24*dm12 - dp34*ddp22 - dm14*dp22 + ddp33*dp31 - ddp21*dp33 + dp23*dm11 - dp21*dm13) ),
+        ((ddp14*dp31 + dp14*dm21 - dp34*ddp11 - dm24*dp11 + ddp12*dp33 - ddp13*dp32 + dp12*dm23 - dp13*dm22) + (ddp24*dp31 + dp24*dm11 - dp34*ddp21 - dm14*dp21 + ddp22*dp33 - ddp23*dp32 + dp22*dm13 - dp23*dm12)),
+        0
+    ]
+
+    l = [-2*v_1[1]*e_1_1 -2*v_1[2]*e_1_2 -2*v_1[3]*e_1_3 -2*v_2[1]*e_2_1 -2*v_2[2]*e_2_2 -2*v_2[3]*e_2_3 -2*v_3[1]*e_3_1 -2*v_3[2]*e_3_2 -2*v_3[3]*e_3_3]
+
+    Lt = [p4*l[1] - p2*l[3] + p3*l[2], p4*l[2] - p3*l[1] + p1*l[3], p4*l[3] - p1*l[2] + p2*l[1], -p1*l[1] - p2*l[2] - p3*l[3]]
+
+    return Lt
+
+end
+
+function ads_dLi_Lb(p, dp, alpha)
+    p1, p2, p3, p4 = p
+
+    dp11, dp12, dp13, dp14 = dp[1,1], dp[1,2], dp[1,3], dp[1,4]
+    dp21, dp22, dp23, dp24 = dp[2,1], dp[2,2], dp[2,3], dp[2,4]
+    dp31, dp32, dp33, dp34 = dp[3,1], dp[3,2], dp[3,3], dp[3,4]
+
+
+    #in i_j_a form
+    g_1_2_1 = (dp14*dp21 - dp24*dp11 + dp12*dp23 - dp13*dp22)
+    g_1_3_1 = (dp14*dp31 - dp34*dp11 + dp12*dp33 - dp13*dp32)
+    g_2_3_1 = (dp24*dp31 - dp34*dp21 + dp22*dp33 - dp23*dp32)
+
+    g_1_2_2 = (dp14*dp22 - dp24*dp12 + dp13*dp21 - dp11*dp23)
+    g_1_3_2 = (dp14*dp32 - dp34*dp12 + dp13*dp31 - dp11*dp33)
+    g_2_3_2 = (dp24*dp32 - dp34*dp22 + dp23*dp31 - dp21*dp33)
+
+    g_1_2_3 = (dp14*dp23 - dp24*dp13 + dp11*dp22 - dp12*dp21)
+    g_1_3_3 = (dp14*dp33 - dp34*dp13 + dp11*dp32 - dp12*dp31)
+    g_2_3_3 = (dp24*dp33 - dp34*dp23 + dp21*dp32 - dp22*dp31)
+
+
+    m1_1 = alpha^2 * (g_1_2_3*2*g_1_2_1 + g_1_3_3*2*g_1_3_1 + g_2_3_3*2*g_2_3_1)
+    m1_2 = -(g_1_2_1*2*g_1_2_3 + g_1_3_1*2*g_1_3_3 + g_2_3_1*2*g_2_3_3)
+
+    m2_1 = (g_1_2_2*2*g_1_2_3 + g_1_3_2*2*g_1_3_3 + g_2_3_2*2*g_2_3_3)
+    m2_2 = - alpha^2 * (g_1_2_3*2*g_1_2_2 + g_1_3_3*2*g_1_3_2 + g_2_3_3*2*g_2_3_2)
+
+    ft = @SVector [
+        0,
+        2*(m1_1 + m1_2),
+        2*(m2_1 + m2_2)
+    ]
+
+    phi_ft = @SVector [p4*ft[1] - p2*ft[3] + p3*ft[2], p4*ft[2] - p3*ft[1] + p1*ft[3], p4*ft[3] - p1*ft[2] + p2*ft[1], -p1*ft[1] - p2*ft[2] - p3*ft[3]]
+
+    return phi_ft
+end
 
 function EnergyANF(sk, ED)
 
@@ -584,4 +740,3 @@ function max_abs_err(A)
     return maximum(abs, A)
 
 end
-
