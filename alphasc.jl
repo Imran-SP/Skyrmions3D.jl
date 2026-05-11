@@ -20,7 +20,7 @@ make_rational_map!(nuc, p1, q1, f1)
 gradient_flow!(nuc,tolerance=0.1,checks=50,dt=0.0004)
 
 Energy(nuc)
-set_metric!(nuc,1)
+set_metric!(nuc,1.0)
 
 nuc4 = deserialize("l120_B4M0_metric1.0")
 vMOI = compute_current(nuc,label="vMOI")
