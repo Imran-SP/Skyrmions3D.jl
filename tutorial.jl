@@ -52,6 +52,7 @@ my_skyrmion = Skyrmion(
 # This sets some parameters too and the periodicity of the fields
 # You can check all the properties of the Skyrmion using overview
 
+
 overview(my_skyrmion)
 
 # You can change all the parameters using the set! functions
@@ -253,7 +254,9 @@ plot_baryon_density(my_skyrmion)
 
 # We can flow this using arrested Newton flow. You can flow for a set numbers of steps
 
-arrested_newton_flow!(my_skyrmion, steps = 100)
+set_metric!(my_skyrmion, 5.0)
+
+arrested_newton_flow!(my_skyrmion, steps = 10000)
 
 # The error is given by the maximum absolute value of the variation. You can also make the
 # flow tell you the energy/error at some intervals using `checks`

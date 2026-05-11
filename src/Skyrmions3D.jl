@@ -10,7 +10,7 @@ using StaticArrays, LinearAlgebra, Interpolations
 using TOML, HDF5
 
 export Skyrmion,
-    get_grid, get_field, set_mpi!, set_lattice!, set_Fpi!, set_ee!, set_physical!
+    get_grid, get_field, set_mpi!, set_lattice!, set_Fpi!, set_ee!, set_physical!, set_metric!
 export set_periodic!, set_dirichlet!, set_neumann!, set_boundary_conditions!
 export check_if_normalised, normer!, normer
 export save_skyrmion, load_skyrmion
@@ -74,6 +74,7 @@ mutable struct Skyrmion
     ee::Float64
     physical::Bool
     vac::Vector{Float64}
+    metric::Float64
 end
 
 
@@ -85,6 +86,7 @@ Skyrmion(
     vac = [0.0, 0.0, 0.0, 1.0],
     mpi = 0.0,
     boundary_conditions = "dirichlet",
+    metric = 1.0
 ) = Skyrmion(
     vacuum_skyrmion(lp, lp, lp, vac),
     Grid([lp, lp, lp], [ls, ls, ls], boundary_conditions),
@@ -93,6 +95,7 @@ Skyrmion(
     ee,
     false,
     vac,
+    metric
 )
 
 Skyrmion(
@@ -103,6 +106,7 @@ Skyrmion(
     vac = [0.0, 0.0, 0.0, 1.0],
     mpi = 0.0,
     boundary_conditions = "dirichlet",
+    metric = 1.0
 ) = Skyrmion(
     vacuum_skyrmion(lp[1], lp[2], lp[3], vac),
     Grid([lp[1], lp[2], lp[3]], [ls[1], ls[2], ls[3]], boundary_conditions),
@@ -111,6 +115,7 @@ Skyrmion(
     ee,
     false,
     vac,
+    metric
 )
 
 """
@@ -152,6 +157,7 @@ function save_skyrmion(skyrmion, path; additional_metadata = Dict(), overwrite =
         "ee" => skyrmion.ee,
         "mpi" => skyrmion.mpi,
         "physical" => skyrmion.physical,
+        "metric" => skyrmion.metric,
         "additional_metadata" => additional_metadata,
     )
 
@@ -204,6 +210,7 @@ function load_skyrmion(path)
     ee = metadata["ee"]
     Fpi = metadata["Fpi"]
     physical = metadata["physical"]
+    metric = metadata["metric"]
 
     loaded_skyrmion = Skyrmion(
         lp,
@@ -213,6 +220,7 @@ function load_skyrmion(path)
         ee = ee,
         Fpi = Fpi,
         vac = vac,
+        metric = metric,
     )
 
     set_physical!(loaded_skyrmion, physical)
@@ -278,6 +286,17 @@ function is_dirichlet(boundary_conditions)
     else
         return false
     end
+end
+
+"""
+    set_metric!(skyrmion, metric)
+
+Sets the Berger metric variation parameter of `skyrmion` to `metric`.
+
+
+"""
+function set_metric!(sk, metric)
+    sk.metric = metric
 end
 
 
