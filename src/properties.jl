@@ -664,3 +664,111 @@ function trace_su2_ijkl(L1, L2, L3, L4, i, j, k, l)
         )
     )
 end
+
+function Berger_Isospin(sk)
+
+    ID = zeros(sk.grid.lp[1], sk.grid.lp[2], sk.grid.lp[3])
+
+    get_BT_density!(ID,sk)
+
+    total = sum(ID)*sk.grid.ls[1]*sk.grid.ls[2]*sk.grid.ls[3]
+
+    return total
+
+end    
+
+function get_BT_density!(density, sk)
+
+    for k in sk.grid.sum_grid[3]
+        @inbounds for j in sk.grid.sum_grid[2], i in sk.grid.sum_grid[1]
+        
+            dp = getDP(sk ,i, j, k )
+
+            density[i,j,k] = BT_engpt(sk,dp,i,j,k,sk.metric) 
+
+        end
+    end
+
+end
+
+function left_t(p,dp)
+    
+    p0 = p[4]
+    p1 = p[1]
+    p2 = p[2]
+    p3 = p[3]
+    phi = [p1, p2, p3]
+
+    c = zeros(3,3)
+    dp_s = dp[:, 1:3]  
+    dp_t = dp[:, 4]    
+
+    for a in 1:3
+        v = dp_s[a,:]
+        v0 = dp_t[a]
+        c[a,:] = (p0 * v) - (v0 * phi) + [(phi[2] * v[3] - phi[3] * v[2]),
+        (phi[3] * v[1] - phi[1] * v[3]),
+        (phi[1] * v[2] - phi[2] * v[1])]
+    end
+
+    return c
+end
+
+function get_left_currents(p,dp)
+
+    lc = left_t(p,dp)
+
+    L_1 = lc[1,:]
+    L_2 = lc[2,:]
+    L_3 = lc[3,:]
+
+    return (L_1,L_2,L_3)
+end
+
+function b_metric_su2(alpha,u,v)
+   
+    met_su2 = u[1]*v[1]+u[2]*v[2]+(alpha^2)*(u[3]*v[3])
+
+    return met_su2
+end
+
+function lie_bracket(x, y)
+    return [-2 * (x[2] * y[3] - x[3] * y[2]),
+            -2 * (x[3] * y[1] - x[1] * y[3]),
+            -2 * (x[1] * y[2] - x[2] * y[1])]
+end
+
+function T2_energy(alpha,L_0)
+
+    return  b_metric_su2(alpha,L_0,L_0)
+
+end
+
+function T4_energy(alpha,L0,L1,L2,L3)
+    t01 = lie_bracket(L0,L1)
+    t02 = lie_bracket(L0,L2)
+    t03 = lie_bracket(L0,L3)
+
+    v = t01 + t02 + t03
+    
+    return (1/4) * b_metric_su2(alpha,v,v)
+end    
+
+function BT_engpt(sk,dp,i,j,k,alpha)
+
+    p = sk.pion_field[i,j,k,:]
+
+    LC = get_left_currents(p,dp)
+
+    L_0 = (2 * (p[4]*p[2] + p[3]*p[1]), 2 * (-p[4]*p[1] + p[3]*p[2]), 2 * (-(p[1])^2 - (p[2])^2))
+    L_1 = LC[1]
+    L_2 = LC[2]
+    L_3 = LC[3]
+
+    T2 = T2_energy(alpha,L_0)
+    T4 = T4_energy(alpha,L_0,L_1,L_2,L_3)
+    
+    return 2*(T2+T4)
+
+end
+

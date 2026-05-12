@@ -29,7 +29,8 @@ export Energy,
     rms_baryon,
     compute_current,
     overview,
-    sphericity
+    sphericity,
+    Berger_Isospin
 
 include("initialise.jl")
 export make_rational_map!, make_RM_product!, make_ADHM!
