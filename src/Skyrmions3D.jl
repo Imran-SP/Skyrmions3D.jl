@@ -30,7 +30,9 @@ export Energy,
     compute_current,
     overview,
     sphericity,
-    Berger_Isospin
+    Berger_Isospin,
+    transverse_spin_moi,
+    longitudinal_spin_moi
 
 include("initialise.jl")
 export make_rational_map!, make_RM_product!, make_ADHM!

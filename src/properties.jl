@@ -755,6 +755,9 @@ function T4_energy(alpha,L0,L1,L2,L3)
 end    
 
 function BT_engpt(sk,dp,i,j,k,alpha)
+    """
+    Computes the kinetic energy density of the skyrmion at a given point isospinning around the 3rd axis. 
+    """
 
     p = sk.pion_field[i,j,k,:]
 
@@ -772,3 +775,124 @@ function BT_engpt(sk,dp,i,j,k,alpha)
 
 end
 
+function rot_engpt(sk,dp,i,j,k,alpha)
+    """
+    Computes the kinetic energy density of the skyrmion at a given point rotating around the first axis
+    """
+
+    p = sk.pion_field[i,j,k,:]
+
+    pions = p[1:3]
+  
+    y = (j - 1 - (sk.grid.lp[2] - 1) / 2) * sk.grid.ls[2]
+    z = (k - 1 - (sk.grid.lp[3] - 1) / 2) * sk.grid.ls[3]
+
+
+    comp3 = lie_bracket(pions,y*dp[3,1:3]-z*dp[2,1:3])
+
+
+    LC = get_left_currents(p,dp)
+
+    L_0 = (p[4] * (y*dp[3,1] - z * dp[2,1]) - p[1] * (y*dp[3,4] - z * dp[2,4]) - 0.5*comp3[1],
+            p[4] * (y*dp[3,2] - z * dp[2,2]) - p[2] * (y*dp[3,4] - z * dp[2,4]) - 0.5*comp3[2],
+            p[4] * (y*dp[3,3] - z * dp[2,3]) - p[3] * (y*dp[3,4] - z * dp[2,4]) - 0.5*comp3[3])  
+
+    L_1 = LC[1]
+    L_2 = LC[2]
+    L_3 = LC[3] 
+
+    T2 = T2_energy(alpha,L_0)
+    T4 = T4_energy(alpha,L_0,L_1,L_2,L_3)
+    
+    return 2*(T2+T4)
+
+end
+
+function get_rot_e_density!(density, sk)
+
+    for k in sk.grid.sum_grid[3]
+        @inbounds for j in sk.grid.sum_grid[2], i in sk.grid.sum_grid[1]
+        
+            dp = getDP(sk ,i, j, k )
+
+            density[i,j,k] = rot_engpt(sk,dp,i,j,k,sk.metric) 
+
+        end
+    end
+
+end
+
+
+function transverse_spin_moi(sk)
+    ID = zeros(sk.grid.lp[1], sk.grid.lp[2], sk.grid.lp[3])
+
+    get_rot_e_density!(ID,sk)
+
+    total = sum(ID)*sk.grid.ls[1]*sk.grid.ls[2]*sk.grid.ls[3]
+
+    return total
+
+end    
+    
+
+function longitudinal_spin_moi(sk)
+    ID = zeros(sk.grid.lp[1], sk.grid.lp[2], sk.grid.lp[3])
+
+    get_rot_e_l_density!(ID,sk)
+
+    total = sum(ID)*sk.grid.ls[1]*sk.grid.ls[2]*sk.grid.ls[3]
+
+    return total
+
+end
+
+
+function rot_longitudinal_engpt(sk,dp,i,j,k,alpha)
+    """
+    Computes the kinetic energy density of the skyrmion at a given point rotating around the third axis
+    """
+
+    p = sk.pion_field[i,j,k,:]
+
+    pions = p[1:3]
+  
+    x = (i - 1 - (sk.grid.lp[1] - 1) / 2) * sk.grid.ls[1]
+    y = (j - 1 - (sk.grid.lp[2] - 1) / 2) * sk.grid.ls[2]
+
+
+    comp3 = lie_bracket(pions,y*dp[1,1:3]-x*dp[2,1:3])
+
+
+    LC = get_left_currents(p,dp)
+
+    L_0 = (p[4] * (y*dp[1,1] - x * dp[2,1]) - p[1] * (y*dp[1,4] - x * dp[2,4]) - 0.5*comp3[1],
+            p[4] * (y*dp[1,2] - x * dp[2,2]) - p[2] * (y*dp[1,4] - x * dp[2,4]) - 0.5*comp3[2],
+            p[4] * (y*dp[1,3] - x * dp[2,3]) - p[3] * (y*dp[1,4] - x * dp[2,4]) - 0.5*comp3[3]
+    
+    )
+
+
+    L_1 = LC[1]
+    L_2 = LC[2]
+    L_3 = LC[3] 
+
+    T2 = T2_energy(alpha,L_0)
+    T4 = T4_energy(alpha,L_0,L_1,L_2,L_3)
+    
+    return 2*(T2+T4)
+
+end
+
+function get_rot_e_l_density!(density, sk)
+
+    for k in sk.grid.sum_grid[3]
+        @inbounds for j in sk.grid.sum_grid[2], i in sk.grid.sum_grid[1]
+        
+            dp = getDP(sk ,i, j, k )
+
+            density[i,j,k] = rot_longitudinal_engpt(sk,dp,i,j,k,sk.metric) 
+
+        end
+    end
+
+end
