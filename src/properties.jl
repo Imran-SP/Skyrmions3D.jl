@@ -896,3 +896,51 @@ function get_rot_e_l_density!(density, sk)
     end
 
 end
+
+
+function virial_theorem(sk)
+
+    ID = zeros(sk.grid.lp[1], sk.grid.lp[2], sk.grid.lp[3])
+
+    get_virial_density!(ID,sk)
+
+    total = sum(ID)*sk.grid.ls[1]*sk.grid.ls[2]*sk.grid.ls[3]
+
+    return total
+
+end
+
+function get_virial_density!(density, sk)
+
+    Threads.@threads for k in sk.grid.sum_grid[3]
+        @inbounds for j in sk.grid.sum_grid[2], i in sk.grid.sum_grid[1]
+
+            dp = getDP(sk, i, j, k)
+
+            density[i, j, k] = virial_pt(dp, sk.pion_field[i, j, k, :], sk.mpi, sk.metric) 
+
+
+        end
+    end
+
+end
+
+function virial_pt(dp, p, mpi, alpha)
+    L3_1 = p[4] * dp[1,3] - p[3] * dp[1,4] + p[1] * dp[1,2] - p[2] * dp[1,1]
+    L3_2 = p[4] * dp[2,3] - p[3] * dp[2,4] + p[1] * dp[2,2] - p[2] * dp[2,1]
+    L3_3 = p[4] * dp[3,3] - p[3] * dp[3,4] + p[1] * dp[3,2] - p[2] * dp[3,1]
+
+    LB12 = dp[1,4] * dp[2,3] - dp[1,3] * dp[2,4] + dp[1,1] * dp[2,2] - dp[1,2] * dp[2,1]
+    LB13 = dp[1,4] * dp[3,3] - dp[1,3] * dp[3,4] + dp[1,1] * dp[3,2] - dp[1,2] * dp[3,1]
+    LB23 = dp[2,4] * dp[3,3] - dp[2,3] * dp[3,4] + dp[2,1] * dp[3,2] - dp[2,2] * dp[3,1]
+
+    e_0 = 2*mpi^2*(1 - p[4])
+    e_2 = (dp[1,1]^2 + dp[1,2]^2 + dp[1,3]^2 + dp[1,4]^2 + dp[2,1]^2 + dp[2,2]^2 + dp[2,3]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,2]^2 + dp[3,3]^2 + dp[3,4]^2)
+    e_4 = (dp[1,4]^2*dp[2,1]^2 + dp[1,4]^2*dp[2,2]^2 + dp[1,4]^2*dp[2,3]^2 + dp[1,1]^2*(dp[2,2]^2 + dp[2,3]^2) - 2*dp[1,1]*dp[1,4]*dp[2,1]*dp[2,4] + dp[1,1]^2*dp[2,4]^2 + dp[1,4]^2*dp[3,1]^2 + dp[2,2]^2*dp[3,1]^2 + dp[2,3]^2*dp[3,1]^2 + dp[2,4]^2*dp[3,1]^2 - 2*dp[2,1]*dp[2,2]*dp[3,1]*dp[3,2] + dp[1,1]^2*dp[3,2]^2 + dp[1,4]^2*dp[3,2]^2 + dp[2,1]^2*dp[3,2]^2 + dp[2,3]^2*dp[3,2]^2 + dp[2,4]^2*dp[3,2]^2 - 2*dp[2,1]*dp[2,3]*dp[3,1]*dp[3,3] - 2*dp[2,2]*dp[2,3]*dp[3,2]*dp[3,3] + dp[1,1]^2*dp[3,3]^2 + dp[1,4]^2*dp[3,3]^2 + dp[2,1]^2*dp[3,3]^2 + dp[2,2]^2*dp[3,3]^2 + dp[2,4]^2*dp[3,3]^2 - 2*(dp[1,1]*dp[1,4]*dp[3,1] + dp[2,4]*(dp[2,1]*dp[3,1] + dp[2,2]*dp[3,2] + dp[2,3]*dp[3,3]))*dp[3,4] + (dp[1,1]^2 + dp[2,1]^2 + dp[2,2]^2 + dp[2,3]^2)*dp[3,4]^2 + dp[1,3]^2*(dp[2,1]^2 + dp[2,2]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,2]^2 + dp[3,4]^2) + dp[1,2]^2*(dp[2,1]^2 + dp[2,3]^2 + dp[2,4]^2 + dp[3,1]^2 + dp[3,3]^2 + dp[3,4]^2) - 2*dp[1,2]*(dp[1,1]*(dp[2,1]*dp[2,2] + dp[3,1]*dp[3,2]) + dp[1,3]*(dp[2,2]*dp[2,3] + dp[3,2]*dp[3,3]) + dp[1,4]*(dp[2,2]*dp[2,4] + dp[3,2]*dp[3,4])) - 2*dp[1,3]*(dp[1,1]*(dp[2,1]*dp[2,3] + dp[3,1]*dp[3,3]) + dp[1,4]*(dp[2,3]*dp[2,4] + dp[3,3]*dp[3,4])))
+    e_0_star = mpi^2*((p[3])^2)
+    e_2_star = (L3_1)^2 + (L3_2)^2 + (L3_3)^2
+    e_4_star = (LB12)^2 + (LB13)^2 + (LB23)^2
+
+
+    return -3 * e_0 - e_2 + e_4 -3*(alpha^2 - 1)*e_0_star - (alpha^2 - 1)*e_2_star + (alpha^2 - 1)*e_4_star
+end

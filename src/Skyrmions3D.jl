@@ -32,7 +32,8 @@ export Energy,
     sphericity,
     Berger_Isospin,
     transverse_spin_moi,
-    longitudinal_spin_moi
+    longitudinal_spin_moi,
+    virial_theorem
 
 include("initialise.jl")
 export make_rational_map!, make_RM_product!, make_ADHM!
